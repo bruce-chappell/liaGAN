@@ -1,0 +1,8 @@
+
+*.pyc
+
+data/00000/.ipynb_checkpoints/
+
+data/00000/small_test/.ipynb_checkpoints/
+
+training/.ipynb_checkpoints/
