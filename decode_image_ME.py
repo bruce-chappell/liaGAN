@@ -24,7 +24,7 @@ def parse_args():
                         help='The pre-trained encoder pkl file path')
     parser.add_argument("--batch_size", type=int,
                         default=8, help="size of the input batch")
-    parser.add_argument("--data_dir_encode", type=str, default='',
+    parser.add_argument("--data_dir_encod/e", type=str, default='',
                         help="Location of the encoded data")
     parser.add_argument('--output_dir', type=str, default='',
                         help='Directory to save the results. If not specified, '
@@ -45,6 +45,7 @@ def main():
     tflib.init_tf(tf_config)
     assert os.path.exists(args.restore_path)
     _, _, _, Gs, _ = load_pkl(args.restore_path)
+    num_layers = Gs.components.synthesis.input_shape[1]
 
     
     batch_codes = np.load(args.data_dir_encode)
@@ -53,20 +54,21 @@ def main():
     print(f'Latent dimension shape: {latent_dim}')
     
     # Building graph
-    Z = tf.placeholder('float32', [None, latent_dim], name='Gaussian')
-    print(f'Z in tensorflow graph: {Z.shape}')
-    #sampling_from_z = Gs.get_output_for(Z, None, randomize_noise=False)
-    sampling_from_z = Gs.get_output_for(Z, None, randomize_noise=True)
+    w_vec = tf.placeholder('float32', [None, latent_dim], name='w_codes')
+    print(f'W in tensorflow graph: {w_vec.shape}')
+    encoder_w_tile = tf.tile(w_vec[:, np.newaxis], [1, num_layers, 1])
+    print(f'encoder_w_tile size: {encoder_w_tile.shape}')
+    reconstructor = Gs.components.synthesis.get_output_for(encoder_w_tile, randomize_noise=False)
     sess = tf.get_default_session()
 
     save_dir = args.output_dir or './outputs/rebuild_encodings'
     os.makedirs(save_dir, exist_ok=True)
 
     print('Creating Images...')
-    samples = sess.run(sampling_from_z, {Z: batch_codes})
+    samples = sess.run(reconstructor, {w_vec: batch_codes})
     samples = samples.transpose(0, 2, 3, 1)
     print(f'shape of output: {samples.shape}')
-    imwrite(immerge(samples, 2, args.batch_size), '%s/decode_00000_new1.png' % (save_dir))
+    imwrite(immerge(samples, 4, args.batch_size), '%s/decode_00000_new1.png' % (save_dir))
 
 
 

@@ -63,17 +63,22 @@ def main():
     # Preparing data
     input_images, _ = preparing_data(im_path=args.data_dir_test, img_type=args.img_type)
 
-    save_dir = args.output_dir or './outputs/reconstruction'
+    save_dir = args.output_dir or './outputs/reconstruction_128'
     os.makedirs(save_dir, exist_ok=True)
 
     print('Reconstructing...')
+    place_holder=np.zeros(512)
     for it, image_id in tqdm(enumerate(range(0, input_images.shape[0], args.batch_size))):
         batch_images = input_images[image_id:image_id+args.batch_size]
+        w_vec = sess.run(encoder_w, feed_dict={real: batch_images})
+        print(f'w_vec shape: {w_vec.shape}')
+        place_holder=np.vstack((place_holder, w_vec))
         rec = sess.run(reconstructor, feed_dict={real: batch_images})
         orin_recon = np.concatenate([batch_images, rec], axis=0)
         orin_recon = orin_recon.transpose(0, 2, 3, 1)
-        imwrite(immerge(orin_recon, 2, batch_images.shape[0]),
-                '%s/reconstruction_%06d.png' % (save_dir, it))
+        imwrite(immerge(orin_recon, 2, batch_images.shape[0]),'%s/reconstruction_%06d.png' % (save_dir, it))
+    print(f'final vec shape: {place_holder[1:].shape}')
+    np.save(f'{save_dir}/w.npy', place_holder[1:])
 
 
 if __name__ == "__main__":
